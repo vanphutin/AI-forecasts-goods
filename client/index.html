@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AI Forecast Dashboard PRO</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="./css/style.css" />
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- html2canvas & jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  </head>
+
+  <body>
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-circle">AI</div>
+        <div class="logo-text">
+          <span class="logo-title">Forecast PRO</span>
+          <span class="logo-subtitle">Demand Analytics</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="tab-btn active" data-tab="forecastTab">
+          <span class="icon">📊</span>
+          <span>Dự báo từng SKU</span>
+        </button>
+        <button class="tab-btn" data-tab="analyticsTab">
+          <span class="icon">📈</span>
+          <span>AI Analytics</span>
+        </button>
+        <button class="tab-btn" data-tab="compareTab">
+          <span class="icon">⚖</span>
+          <span>So sánh SKU</span>
+        </button>
+        <button class="tab-btn" data-tab="yearTab">
+          <span class="icon">📅</span>
+          <span>Multi-Year</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="badge badge-green">Online</div>
+        <p class="footer-text">Local API: <span>http://localhost:8000</span></p>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1>AI Forecast System PRO</h1>
+          <p class="topbar-subtitle">
+            Hệ thống dự báo nhu cầu bán hàng sử dụng AI & Time Series
+          </p>
+        </div>
+
+        <div class="topbar-actions">
+          <span class="tag">CSV Import</span>
+          <span class="tag tag-outline">AI Explain</span>
+          <span class="tag tag-accent">PDF Export</span>
+        </div>
+      </header>
+
+      <!-- TAB 1: FORECAST -->
+      <section id="forecastTab" class="tab active">
+        <div class="grid">
+          <div class="card">
+            <div class="card-header">
+              <h3>1. Tải dữ liệu CSV</h3>
+              <p class="card-subtitle">
+                File gồm các cột:
+                <strong>date, sku, quantity, price, promotion</strong>
+              </p>
+            </div>
+
+            <div class="form-group">
+              <label for="fileInput">Chọn file CSV</label>
+              <div class="file-input-wrapper">
+                <input type="file" id="fileInput" accept=".csv" />
+              </div>
+            </div>
+
+            <button class="btn primary" id="uploadBtn" onclick="uploadFile()">
+              📤 Upload &amp; Xem trước
+            </button>
+
+            <div class="preview-wrapper">
+              <div class="preview-header">
+                <span>Xem trước dữ liệu (5–10 dòng đầu)</span>
+              </div>
+              <pre id="uploadPreview" class="preview empty">
+Chưa có dữ liệu. Hãy upload file CSV...
+              </pre>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>2. Dự báo xu hướng bán hàng</h3>
+              <p class="card-subtitle">
+                Chọn SKU &amp; số ngày để hệ thống tạo forecast.
+              </p>
+            </div>
+
+            <div class="form-group">
+              <label>Chọn SKU</label>
+              <select id="skuSelect" class="input">
+                <option value="">-- Chưa có dữ liệu --</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Số ngày dự báo</label>
+              <div class="inline-input">
+                <input
+                  id="daysInput"
+                  type="number"
+                  value="14"
+                  min="7"
+                  max="30"
+                  class="input"
+                />
+                <span class="help-text">Trong khoảng 7–30 ngày</span>
+              </div>
+            </div>
+
+            <div class="btn-group">
+              <button class="btn accent" id="forecastBtn" onclick="forecast()">
+                ⚡ Dự báo với AI
+              </button>
+              <button class="btn outline" onclick="exportPDF()">
+                📄 Xuất báo cáo PDF
+              </button>
+            </div>
+
+            <div class="summary-box">
+              <div class="summary-title">📌 Tóm tắt từ AI</div>
+              <p id="forecastSummary" class="summary-text">
+                Chưa có forecast. Hãy chọn SKU và bấm “Dự báo với AI”.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card full">
+          <div class="card-header">
+            <h3>Biểu đồ dự báo</h3>
+            <p class="card-subtitle">
+              Đường màu xanh: dữ liệu lịch sử • Đường vàng đứt: dự báo AI
+            </p>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="forecastChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: ANALYTICS -->
+      <section id="analyticsTab" class="tab">
+        <div class="card full">
+          <div class="card-header">
+            <h3>📈 Phân tích dữ liệu (AI Analytics)</h3>
+            <p class="card-subtitle">
+              AI tự động phân tích tổng quan: SKU nào mạnh, xu hướng
+              tăng/giảm...
+            </p>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn primary" onclick="analyzeData()">
+              🧠 Phân tích tự động
+            </button>
+          </div>
+
+          <div class="split-layout">
+            <div class="split-panel">
+              <h4>📝 Kết quả phân tích</h4>
+              <pre id="analysisText" class="analysis-box">
+Chưa có kết quả. Bấm “Phân tích tự động” để bắt đầu.
+              </pre>
+            </div>
+
+            <div class="split-panel">
+              <h4>📊 Tổng lượng bán theo SKU</h4>
+              <div class="chart-wrapper">
+                <canvas id="analyticsChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: COMPARE -->
+      <section id="compareTab" class="tab">
+        <div class="grid">
+          <div class="card">
+            <div class="card-header">
+              <h3>So sánh forecast giữa hai SKU</h3>
+              <p class="card-subtitle">
+                Hệ thống sẽ forecast 14 ngày cho 2 SKU để so sánh.
+              </p>
+            </div>
+
+            <div class="form-group">
+              <label>SKU 1</label>
+              <select id="compareSku1" class="input">
+                <option value="">-- Chưa có dữ liệu --</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>SKU 2</label>
+              <select id="compareSku2" class="input">
+                <option value="">-- Chưa có dữ liệu --</option>
+              </select>
+            </div>
+
+            <button class="btn accent" onclick="compareForecast()">
+              ⚖ So sánh forecast
+            </button>
+          </div>
+        </div>
+
+        <div class="card full">
+          <div class="card-header">
+            <h3>Biểu đồ so sánh</h3>
+            <p class="card-subtitle">
+              Hai đường thể hiện forecast cho từng SKU trong cùng giai đoạn.
+            </p>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="compareChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: MULTI-YEAR ANALYSIS -->
+      <section id="yearTab" class="tab">
+        <div class="card full">
+          <div class="card-header">
+            <h3>📅 Phân tích nhiều năm (Multi-Year Analysis)</h3>
+            <p class="card-subtitle">
+              Tải nhiều file CSV (2022, 2023, 2024…) để phân tích xu hướng theo
+              năm.
+            </p>
+          </div>
+
+          <div class="grid grid-2">
+            <div>
+              <div class="form-group">
+                <label>Tải nhiều file CSV</label>
+                <input
+                  type="file"
+                  id="multiFileInput"
+                  multiple
+                  accept=".csv"
+                  class="input"
+                />
+              </div>
+
+              <div class="btn-group">
+                <button class="btn primary" onclick="uploadMulti()">
+                  📤 Tải các file
+                </button>
+                <button class="btn accent" onclick="multiYearAnalysis()">
+                  🧠 AI phân tích nhiều năm
+                </button>
+              </div>
+
+              <div class="preview-wrapper">
+                <div class="preview-header">
+                  <span>Raw data từ nhiều năm</span>
+                </div>
+                <pre id="multiRaw" class="preview small">
+Chưa có dữ liệu. Hãy chọn và upload các file CSV nhiều năm.
+          </pre
+                >
+              </div>
+            </div>
+
+            <div>
+              <h4>🧠 Kết luận từ AI</h4>
+              <div
+                id="multiAI"
+                class="analysis-box small"
+                style="white-space: normal"
+              >
+                Chưa có phân tích. Bấm “AI phân tích nhiều năm”.
+              </div>
+            </div>
+          </div>
+          <!-- ✅ Thiếu thẻ này -->
+
+          <div class="card-subsection">
+            <h4>📊 Biểu đồ tổng lượng bán theo năm</h4>
+            <div class="chart-wrapper">
+              <canvas id="multiChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loading" class="loading hidden">
+      <div class="loading-inner">
+        <div class="spinner"></div>
+        <p>AI đang xử lý, vui lòng đợi...</p>
+      </div>
+    </div>
+
+    <!-- JS -->
+    <script src="./js/main.js"></script>
+  </body>
+</html>

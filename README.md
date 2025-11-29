@@ -450,4 +450,4 @@ Hệ thống được phát triển cho đồ án Công nghệ Phần mềm - Đ
 
 ---
 
-**Last Updated**: 2024
+**Last Updated**: 29/11/2025
